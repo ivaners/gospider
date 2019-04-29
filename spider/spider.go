@@ -61,7 +61,15 @@ func (s *Spider) Run() error {
 		}
 		ctxs = append(ctxs, ctx)
 		if s.task.OutputConfig.Type == common.OutputTypeMySQL {
-			ctx.setOutputDB(s.db)
+			if s.db != nil {
+				ctx.setOutputDB(s.db)
+			} else {
+				db, err := common.NewDB(s.task.OutputConfig.MySQLConf)
+				if err != nil {
+					return err
+				}
+				ctx.setOutputDB(db)
+			}
 		}
 
 		addCallback(ctx, s.task.Rule.Nodes[i])
@@ -106,6 +114,9 @@ func (s *Spider) Run() error {
 
 		for _, ctx := range ctxs {
 			ctx.closeCSVFileIfNeeded()
+			if ctx.outputDB != nil {
+				ctx.outputDB.Close()
+			}
 		}
 
 		log.Infof("task:%s run completed...", s.task.Name)
